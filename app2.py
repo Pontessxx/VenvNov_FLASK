@@ -68,7 +68,8 @@ color_marker_map = {
     'LICENÇA':{'cor': '#632aa1', 'marker': 'diamond'},
 }
 
-saudacoes_validas = ["olá", "oi", "e aí", "opa", "fala", "alô", "olá chat", "bom dia chat", "boa noite chat", "boa tarde chat", "salve", "olá tudo bem?", "oi tudo bem?", "e aí tudo bem?", "opa tudo bem?", "fala tudo bem?", "alô tudo bem?", "olá chat tudo bem?", "bom dia chat tudo bem?", "boa noite chat tudo bem?", "boa tarde chat tudo bem?", "salve tudo bem?"]
+saudacoes_validas = ["olá", 
+                     "oi", "e aí", "opa", "fala", "alô", "olá chat", "bom dia chat", "boa noite chat", "boa tarde chat", "salve", "olá tudo bem?", "oi tudo bem?", "e aí tudo bem?", "opa tudo bem?", "fala tudo bem?", "alô tudo bem?", "olá chat tudo bem?", "bom dia chat tudo bem?", "boa noite chat tudo bem?", "boa tarde chat tudo bem?", "salve tudo bem?"]
 
 
 
@@ -1138,25 +1139,23 @@ def processar_mensagem(mensagem):
 #  ROTAS DO CHATBOT
 # ******************
 def listar_nomes_disponiveis():
-    conn = get_db_connection()
-    if not conn:
-        return
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return
+        query = "SELECT Nome.Nome FROM Nome"
+        nomes_disponiveis = pd.read_sql(query, conn)
+        conn.close()
 
-    cursor = conn.cursor()
-    query = "SELECT Nome.Nome FROM Nome"
-    cursor.execute(query)
-    nomes_disponiveis = [row[0] for row in cursor.fetchall()]
-    conn.close()
-
-    if nomes_disponiveis:
-        print("\n🔹 **Lista de Nomes Disponíveis no Banco** 🔹")
-        for nome in nomes_disponiveis:
-            print(f"- {nome}")
-    
-    else:
-        print("\n⚠ Nenhum nome encontrado no banco de dados.")
-    
-    return f'Nomes disponíveis: {", ".join(nomes_disponiveis)}'
+        if not nomes_disponiveis.empty:
+            # Converte o DataFrame em tabela HTML com classe para facilitar a estilização
+            html_table = nomes_disponiveis.to_html(classes="content-table", index=False, border=0)
+            return f"<h3>Nomes presentes na consulta</h3>" + html_table
+        
+        else:
+                return f"<h3>Nomes presentes na consulta</h3><p>Nenhum dado encontrado.</p>"
+    except Exception as e:
+        return f"<h3>Nomes presentes na consulta</h3><p>Erro na consulta: {str(e)}</p>"
 
 def executar_consulta(query, params, titulo):
     """
@@ -1234,7 +1233,6 @@ def consulta_nome_mais_presencas(tipo_frequencia, periodo=None):
     
     return executar_consulta(query, params, f"Mais presenças de '{tipo_frequencia}' no período {periodo if periodo else 'geral'}")
 
-
 def consulta_nome_mais_presenca_msg(tipo_frequencia, periodo=None):
     query = """
     SELECT TOP 1 Nome.Nome, Presenca.Presenca, FORMAT(Controle.Data, 'mm/yyyy') AS MesAno,
@@ -1272,11 +1270,7 @@ def consulta_nome_mais_presenca_msg(tipo_frequencia, periodo=None):
        return teste
     else:
         return None
-   
     
-
-    
-
 def consulta_por_presenca_e_periodo(tipo_frequencia, periodo):
     query = """
         SELECT Nome.Nome, Presenca.Presenca, FORMAT(Controle.Data, 'yyyy') AS Ano,
@@ -1367,8 +1361,8 @@ def chatbot():
                 "mensagem": "Claro! Aqui estão os nomes disponíveis:"
             })
             respostas.append({
-                "tipo": "text",
-                "mensagem": f"Nomes disponíveis: {lista_nomes}"
+                "tipo": "table",
+                "mensagem": lista_nomes
             })
 
         # Processa a mensagem para extrair os parâmetros
@@ -1446,11 +1440,6 @@ def chatbot():
 
     # Para requisição GET, envia uma mensagem padrão.
     return jsonify({"respostas": [{"tipo": "text", "mensagem": "Bem-vindo ao chatbot! Envie uma mensagem para começar."}]})
-
-
-
-
-
 
 
 

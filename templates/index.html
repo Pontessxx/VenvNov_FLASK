@@ -293,13 +293,39 @@
   
       function toggleChat() {
         var chatOverlay = document.getElementById("chat-overlay");
-        // Verifica se o overlay está oculto e alterna a visibilidade
+        var chatMessages = document.getElementById("chat-messages");
+
         if (chatOverlay.style.display === "none" || chatOverlay.style.display === "") {
             chatOverlay.style.display = "block";
+
+            // Se o chat está sendo aberto pela primeira vez na sessão, exibir mensagens de boas-vindas
+            if (!sessionStorage.getItem("chatOpened")) {
+                chatMessages.innerHTML = ""; // Limpa mensagens antigas antes de exibir as saudações
+
+                var botDiv1 = document.createElement("div");
+                botDiv1.classList.add("chat-message", "bot");
+                botDiv1.textContent = "Bem-vindo ao chatbot! Envie uma mensagem para começar.";
+
+                var botDiv2 = document.createElement("div");
+                botDiv2.classList.add("chat-message", "bot");
+                botDiv2.textContent = "Se precisar de ajuda, basta perguntar!";
+
+                chatMessages.appendChild(botDiv1);
+                chatMessages.appendChild(botDiv2);
+
+                sessionStorage.setItem("chatOpened", "true"); // Marca que o chat foi aberto
+                saveChatHistory();
+            } else {
+                // Carregar histórico do chat caso já tenha sido aberto antes
+                loadChatHistory();
+            }
         } else {
             chatOverlay.style.display = "none";
+            sessionStorage.removeItem("chatOpened"); // Remove a marcação ao fechar o chat
         }
-        }
+    }
+
+
 
       window.toggleChat = toggleChat;
   
