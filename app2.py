@@ -68,10 +68,91 @@ color_marker_map = {
     'LICENÇA':{'cor': '#632aa1', 'marker': 'diamond'},
 }
 
+# Dicionário de saudações válidas para o chatbot
 saudacoes_validas = ["olá", 
                      "oi", "e aí", "opa", "fala", "alô", "olá chat", "bom dia chat", "boa noite chat", "boa tarde chat", "salve", "olá tudo bem?", "oi tudo bem?", "e aí tudo bem?", "opa tudo bem?", "fala tudo bem?", "alô tudo bem?", "olá chat tudo bem?", "bom dia chat tudo bem?", "boa noite chat tudo bem?", "boa tarde chat tudo bem?", "salve tudo bem?"]
 
-
+# Perguntas e respostas para o chatbot
+perguntas_respostas = {
+    "adicionar": {
+        "presenca": {
+            "perguntas": [
+                "como adiciono uma presença?", "quero registrar uma presença", "como inserir uma presença?",
+                "onde adiciono presença?", "como faço para cadastrar presença?", "como faço para marcar presença?",
+                "adicionar presença", "inserir presença", "onde faço para adicionar presença?", "como marcar uma presença?",
+                "onde posso registrar uma presença?", "como coloco uma presença?", "como registrar presença?",
+                "quero adicionar um nome na presença", "como faço para incluir uma presença?",
+                "como faço para adicionar presença no sistema?", "como faço para salvar uma presença?",
+                "quero registrar um funcionário presente", "onde posso lançar presença?"
+            ],
+            "resposta": "Para adicionar presença, acesse a página 'Adicionar Presença', selecione o nome, data e tipo de presença e clique em 'Salvar'."
+        },
+        "nome": {
+            "perguntas": [
+                "como adiciono um nome?", "quero registrar um novo nome", "como inserir um nome?",
+                "onde adiciono nome?", "como faço para cadastrar um novo nome?", "como faço para incluir um nome?",
+                "como insiro um novo nome no sistema?", "como posso cadastrar um nome?", "onde adiciono uma nova pessoa?",
+                "como coloco um nome no sistema?", "quero incluir um nome no cadastro", "onde faço o registro de nome?",
+                "onde posso adicionar um novo colaborador?", "como cadastrar novo usuário?"
+            ],
+            "resposta": "Para adicionar um nome, vá até a página 'Adicionar Presença', digite o nome e clique em 'Salvar'."
+        },
+        "empresa": {
+            "perguntas": [
+                "como adiciono uma empresa?", "quero registrar uma nova empresa ao site", "como inserir uma empresa?",
+                "onde adiciono uma empresa?", "como faço para cadastrar uma empresa?", "como faço para adicionar uma empresa?",
+                "onde posso registrar uma empresa?", "adicionar empresa", "inserir empresa",
+                "onde cadastro uma nova empresa?", "como faço para incluir uma empresa no sistema?",
+                "quero adicionar uma nova organização", "quero incluir uma nova empresa", "como cadastrar empresa?",
+                "onde adiciono um novo CNPJ?", "como faço para cadastrar uma nova firma?"
+            ],
+            "resposta": "Para adicionar uma empresa, acesse a página 'Adicionar Presença', digite o nome da empresa e clique em 'Salvar'."
+        }
+    },
+    "remover": {
+        "presenca": {
+            "perguntas": [
+                "como remover uma presença?", "quero excluir uma presença", "como apagar uma presença?",
+                "onde posso deletar uma presença?", "remover presença", "excluir presença", "apagar presença",
+                "deletar presença", "como cancelo uma presença?", "como retiro uma presença?",
+                "como desfazer um lançamento de presença?", "como faço para corrigir um erro na presença?",
+                "remover presença de um funcionário", "quero cancelar uma presença já registrada"
+            ],
+            "resposta": "Para remover presença, acesse a página 'Controle de Presença', selecione a data e clique em 'Remover'."
+        },
+        "nome": {
+            "perguntas": [
+                "como remover um nome?", "quero excluir um nome do controle", "como apagar um nome?",
+                "onde posso deletar um nome?", "remover nome", "excluir nome", "apagar nome", "deletar nome",
+                "como cancelo um nome?", "quero excluir um colaborador", "como faço para retirar um nome?",
+                "remover funcionário do sistema", "como eliminar um nome cadastrado?", "onde posso excluir um usuário?"
+            ],
+            "resposta": "Para remover um nome, acesse a página 'Controle de Presença', selecione o nome e clique em 'Remover'."
+        },
+        "empresa": {
+            "perguntas": [
+                "como remover uma empresa?", "quero excluir uma empresa do controle", "como apagar uma empresa?",
+                "onde posso deletar uma empresa?", "remover empresa", "excluir empresa", "apagar empresa",
+                "deletar empresa", "como cancelo uma empresa?", "como faço para remover um CNPJ?",
+                "onde retiro uma empresa cadastrada?", "como faço para desativar uma empresa?",
+                "quero excluir uma firma do sistema", "onde faço a remoção de uma empresa cadastrada?"
+            ],
+            "resposta": "Para remover uma empresa, acesse a página 'Controle de Presença', selecione a empresa e clique em 'Remover'."
+        }
+    },
+    "filtrar": {
+        "perguntas": [
+            "como filtrar presenças?", "quero buscar um nome específico", "como faço para ver as presenças de um mês?",
+            "como aplico um filtro nas presenças?", "filtrar presença", "quero pesquisar uma presença",
+            "como vejo quem esteve presente?", "quero encontrar um nome", "como posso filtrar os registros?",
+            "onde aplico um filtro para ver presenças?", "existe um jeito de filtrar as presenças?",
+            "como faço para listar presenças de um período?", "onde vejo registros por data?",
+            "como encontro um funcionário pelo nome?", "como ver lista de presenças de um mês específico?",
+            "como filtrar funcionários por empresa?", "onde posso ver um histórico de presenças?"
+        ],
+        "resposta": "Para filtrar, utilize os campos de nome, mês, tipo de presença e ano na página principal."
+    }
+}
 
 # Dicionário para mapear meses abreviados, completos e numéricos corretamente
 meses_map = {
@@ -1085,9 +1166,29 @@ def desprogramar_ferias():
 
 
 
-# -------------------------
-#       CHATBOT
-# -------------------------
+#* -------------------------
+#*         CHATBOT
+#* -------------------------
+# 📌 **Função para identificar a intenção e responder corretamente**
+def identificar_pergunta(user_input):
+    user_input = user_input.lower().strip()
+    melhor_score = 0.0
+    melhor_correspondencia = None
+
+    for categoria, subcategorias in perguntas_respostas.items():
+        for subcategoria, dados in subcategorias.items():
+            if "perguntas" in dados:
+                for pergunta in dados["perguntas"]:
+                    score = difflib.SequenceMatcher(None, user_input, pergunta).ratio()
+                    if score > melhor_score:
+                        melhor_score = score
+                        melhor_correspondencia = {"tipo": "ajuda", "mensagem": dados["resposta"]}
+
+    if melhor_score > 0.6:
+        return melhor_correspondencia  # Retorna a resposta se encontrou uma boa correspondência
+
+    return None  # Retorna None se não encontrou uma pergunta relevante
+
 def processar_mensagem(mensagem):
     """
     Processa a mensagem do usuário utilizando SpaCy e extrai:
@@ -1095,48 +1196,58 @@ def processar_mensagem(mensagem):
       - periodo: lista de meses/anos
       - tipo_frequencia: tipo de presença (convertido para singular)
     """
-    doc = nlp(mensagem)
-    nome_input = None
-    periodo = []
-    tipo_frequencia = None
+     # Primeiro, verifica se é uma pergunta de ajuda
+    resultado_pergunta = identificar_pergunta(mensagem)
+    if resultado_pergunta:
+        return {
+            "tipo": "ajuda",
+            "mensagem": resultado_pergunta["mensagem"]
+        }  # Retorna diretamente a resposta para o chat
 
-    for token in doc:
-        palavra = token.text.lower()
+    else:
+    
+        doc = nlp(mensagem)
+        nome_input = None
+        periodo = []
+        tipo_frequencia = None
 
-        # Verifica se a palavra representa um mês (abreviado ou completo) e converte para número
-        if palavra in meses_map:
-            periodo.append(meses_map[palavra])
-            continue
+        for token in doc:
+            palavra = token.text.lower()
 
-        # Se for um número de 1 ou 2 dígitos entre 1 e 12, assume que é um mês
-        if palavra.isdigit() and 1 <= int(palavra) <= 12:
-            periodo.append(palavra.zfill(2))
-            continue
+            # Verifica se a palavra representa um mês (abreviado ou completo) e converte para número
+            if palavra in meses_map:
+                periodo.append(meses_map[palavra])
+                continue
 
-        # Se for um número de 4 dígitos, assume que é um ano
-        if palavra.isdigit() and len(palavra) == 4:
-            periodo.append(palavra)
-            continue
+            # Se for um número de 1 ou 2 dígitos entre 1 e 12, assume que é um mês
+            if palavra.isdigit() and 1 <= int(palavra) <= 12:
+                periodo.append(palavra.zfill(2))
+                continue
 
-        # Identifica tipo de frequência (plural para singular)
-        if palavra in frequencia_plural_para_singular:
-            tipo_frequencia = frequencia_plural_para_singular[palavra]
-        elif palavra in frequencia_plural_para_singular.values():
-            tipo_frequencia = palavra
+            # Se for um número de 4 dígitos, assume que é um ano
+            if palavra.isdigit() and len(palavra) == 4:
+                periodo.append(palavra)
+                continue
 
-        # Se for nome próprio (PROPN) e não representar um mês, considera como nome
-        if token.pos_ == "PROPN" and palavra not in meses_map.values():
-            nome_input = token.text
+            # Identifica tipo de frequência (plural para singular)
+            if palavra in frequencia_plural_para_singular:
+                tipo_frequencia = frequencia_plural_para_singular[palavra]
+            elif palavra in frequencia_plural_para_singular.values():
+                tipo_frequencia = palavra
 
-    return {
-        "nome_input": nome_input,
-        "periodo": periodo,
-        "tipo_frequencia": tipo_frequencia
-    }
+            # Se for nome próprio (PROPN) e não representar um mês, considera como nome
+            if token.pos_ == "PROPN" and palavra not in meses_map.values():
+                nome_input = token.text
+
+        return {
+            "nome_input": nome_input,
+            "periodo": periodo if len(periodo) > 0 else None,
+            "tipo_frequencia": tipo_frequencia
+        }
 
 
 # ******************
-#  ROTAS DO CHATBOT
+#*  ROTAS DO CHATBOT
 # ******************
 def listar_nomes_disponiveis():
     try:
@@ -1367,9 +1478,12 @@ def chatbot():
 
         # Processa a mensagem para extrair os parâmetros
         processamento = processar_mensagem(mensagem_usuario)
+        
+        # Caso seja uma pergunta de ajuda, retorna a resposta imediatamente e encerra
+        if processamento["tipo"] == "ajuda":
+            return jsonify({"respostas": [{"tipo": "text", "mensagem": processamento["mensagem"]}]})
 
         # Dependendo dos dados extraídos, chame a consulta apropriada.
-        # Suponha que as funções de consulta retornem resultados formatados (por exemplo, HTML de tabela ou texto)
         if processamento["nome_input"] and processamento["tipo_frequencia"] and processamento["periodo"]:
             resultado = consulta_presencas(
                 processamento["nome_input"],
