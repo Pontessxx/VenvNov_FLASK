@@ -183,6 +183,14 @@ frequencia_plural_para_singular = {
     "férias": "férias", "licenças": "licença",
 }
 
+LISTAGEM_NOMES = [
+    "nomes disponivel", "lista de nomes", "quais são os nomes cadastrados",
+    "quero ver a listagem de nomes", "mostrar todos os nomes", "exibir nomes",
+    "quais são os funcionários cadastrados", "me mostre os nomes disponíveis",
+    "listar nomes", "quem está cadastrado no sistema", "mostrar nomes", 
+    "exibir listagem de nomes", "onde vejo a lista de nomes", "quero ver os nomes",
+    "quais são os nomes registrados"
+]
 
 @app.route("/capturar_largura_tela", methods=["POST"])
 def capturar_largura_tela():
@@ -1169,7 +1177,7 @@ def desprogramar_ferias():
 #* -------------------------
 #*         CHATBOT
 #* -------------------------
-# 📌 **Função para identificar a intenção e responder corretamente**
+# Função para identificar a intenção e responder corretamente
 def identificar_pergunta(user_input):
     user_input = user_input.lower().strip()
     melhor_score = 0.0
@@ -1204,46 +1212,46 @@ def processar_mensagem(mensagem):
             "mensagem": resultado_pergunta["mensagem"]
         }  # Retorna diretamente a resposta para o chat
 
-    else:
     
-        doc = nlp(mensagem)
-        nome_input = None
-        periodo = []
-        tipo_frequencia = None
+    doc = nlp(mensagem)
+    nome_input = None
+    periodo = []
+    tipo_frequencia = None
 
-        for token in doc:
-            palavra = token.text.lower()
+    for token in doc:
+        palavra = token.text.lower()
 
-            # Verifica se a palavra representa um mês (abreviado ou completo) e converte para número
-            if palavra in meses_map:
-                periodo.append(meses_map[palavra])
-                continue
+        # Verifica se a palavra representa um mês (abreviado ou completo) e converte para número
+        if palavra in meses_map:
+            periodo.append(meses_map[palavra])
+            continue
 
-            # Se for um número de 1 ou 2 dígitos entre 1 e 12, assume que é um mês
-            if palavra.isdigit() and 1 <= int(palavra) <= 12:
-                periodo.append(palavra.zfill(2))
-                continue
+        # Se for um número de 1 ou 2 dígitos entre 1 e 12, assume que é um mês
+        if palavra.isdigit() and 1 <= int(palavra) <= 12:
+            periodo.append(palavra.zfill(2))
+            continue
 
-            # Se for um número de 4 dígitos, assume que é um ano
-            if palavra.isdigit() and len(palavra) == 4:
-                periodo.append(palavra)
-                continue
+        # Se for um número de 4 dígitos, assume que é um ano
+        if palavra.isdigit() and len(palavra) == 4:
+            periodo.append(palavra)
+            continue
 
-            # Identifica tipo de frequência (plural para singular)
-            if palavra in frequencia_plural_para_singular:
-                tipo_frequencia = frequencia_plural_para_singular[palavra]
-            elif palavra in frequencia_plural_para_singular.values():
-                tipo_frequencia = palavra
+        # Identifica tipo de frequência (plural para singular)
+        if palavra in frequencia_plural_para_singular:
+            tipo_frequencia = frequencia_plural_para_singular[palavra]
+        elif palavra in frequencia_plural_para_singular.values():
+            tipo_frequencia = palavra
 
-            # Se for nome próprio (PROPN) e não representar um mês, considera como nome
-            if token.pos_ == "PROPN" and palavra not in meses_map.values():
-                nome_input = token.text
+        # Se for nome próprio (PROPN) e não representar um mês, considera como nome
+        if token.pos_ == "PROPN" and palavra not in meses_map.values():
+            nome_input = token.text
 
-        return {
-            "nome_input": nome_input,
-            "periodo": periodo if len(periodo) > 0 else None,
-            "tipo_frequencia": tipo_frequencia
-        }
+    return {
+        "nome_input": nome_input,
+        "periodo": periodo if len(periodo) > 0 else None,
+        "tipo_frequencia": tipo_frequencia,
+        "tipo": "QUERY",
+    }
 
 
 # ******************
@@ -1465,7 +1473,7 @@ def chatbot():
             return jsonify({"respostas": respostas})
         
         # Se o usuário pedir a lista de nomes disponíveis
-        if "nomes disponivel" in mensagem_usuario.lower() or "lista de nomes" in mensagem_usuario.lower():
+        if difflib.get_close_matches(mensagem_usuario, LISTAGEM_NOMES, n=1, cutoff=0.6):
             lista_nomes = listar_nomes_disponiveis()  # Supondo que essa função retorne uma string ou lista formatada
             respostas.append({
                 "tipo": "text",

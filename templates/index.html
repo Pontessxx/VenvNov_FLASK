@@ -273,7 +273,16 @@
         updateChartColors(currentTheme);
       });
   
-      
+      // Função para capturar a largura da tela e armazenar no sessionStorage
+      function salvarLarguraTela() {
+          const screenWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+          sessionStorage.setItem('screenWidth', screenWidth);
+      }
+
+      // Chama a função ao carregar a página
+      document.addEventListener("DOMContentLoaded", function() {
+          salvarLarguraTela();
+      });
   
       // --- Funções do Chat com persistência de histórico ---
   
