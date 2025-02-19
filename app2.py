@@ -497,7 +497,7 @@ def index():
         "index.html",
         sites=sites,
         empresas=[e[1] for e in empresas],
-        nomes=nomes,
+        nomes = get_nomes(siteempresa_id, ativos=True) + get_nomes(siteempresa_id, ativos=False),
         meses=meses_dict.keys(),
         presencas=pres,
         selected_site=selected_site,
