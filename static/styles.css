@@ -181,6 +181,15 @@ body {
     border: none;
     border-radius: 5px;
 }
+
+.filtros #datePicker{
+    background: var(--menu-background-color);
+    color: var(--text-color);
+    padding: 8px;
+    border: none;
+    border-radius: 5px;
+}
+
 /* Tabela */
 #table-container {
     max-height: 400px;

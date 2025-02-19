@@ -14,6 +14,23 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+
+  <script>
+    // Função para capturar a largura da tela e armazenar no sessionStorage
+    function salvarLarguraTela() {
+        const screenWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+        sessionStorage.setItem('screenWidth', screenWidth);
+    }
+
+    // Chama a função ao carregar a página
+    document.addEventListener("DOMContentLoaded", function() {
+        salvarLarguraTela();
+    });
+</script>   
+
 </head>
 <body>
   <div class="container">
@@ -102,6 +119,11 @@
                 </option>
               {% endfor %}
             </select>
+          </div>
+
+          <div>
+            <label for="datePicker">Selecione o Período de Data:</label>
+            <input type="text" id="datePicker" name="dateRange" placeholder="Selecione o período">
           </div>
           
         </form>
@@ -195,7 +217,7 @@
       $('#nomes').select2({ placeholder: "Escolha um nome" });
       $('#meses').select2({ placeholder: "Escolha um mês" });
       $('#presenca').select2({ placeholder: "Escolha uma presença" });
-  
+
       function submitWithSiteEmpresa() {
         const site = $('#site').val();
         const empresa = $('#empresa').val();
@@ -203,21 +225,38 @@
         $('#hiddenEmpresa').val(empresa);
         $('#filterForm').submit();
       }
-  
+
       $('#nomes, #meses, #presenca, #ano').on('change', function () {
         submitWithSiteEmpresa();
       });
-  
+
       $('#site, #empresa').on('change', function () {
         $('#siteForm').submit();
       });
-  
+
+      // Inicializa o datepicker
+      flatpickr("#datePicker", {
+        mode: "range",
+        dateFormat: "d/m/Y",
+        minDate: "01/01/2024",
+        locale: {
+          firstDayOfWeek: 1
+        },
+        onClose: function (selectedDates, dateStr, instance) {
+          if (selectedDates.length === 2) {
+            // Define o valor do campo de intervalo de datas no formulário
+            $('#datePicker').val(dateStr);
+            submitWithSiteEmpresa(); // Submete o formulário com o intervalo de datas
+          }
+        }
+      });
+
       function goToAddPresenca() {
         window.location.href = "/adicionar-presenca";
       }
       window.goToAddPresenca = goToAddPresenca;
-
     });
+
     $(document).ready(function () {
       // Função para atualizar as cores dos gráficos com base no tema
       function updateChartColors(theme) {
@@ -232,7 +271,7 @@
           Plotly.relayout('pie-chart', { 'font.color': textColor });
         }
       }
-  
+
       // Aplica o tema salvo no localStorage
       (function () {
         const savedTheme = localStorage.getItem('theme');
@@ -242,160 +281,143 @@
           localStorage.setItem('theme', 'light-mode');
         }
       })();
-  
+
       // Renderiza os gráficos
       var stackedBarChartData = {{ stacked_bar_chart_data | safe }};
       var scatterChartData = {{ scatter_chart_data | safe }};
       var pieChartData = {{ pie_chart_data | safe }};
-  
+
       Plotly.newPlot('stacked-bar-chart', stackedBarChartData.data, stackedBarChartData.layout)
         .then(function () {
           const currentTheme = localStorage.getItem('theme') || 'light-mode';
           updateChartColors(currentTheme);
         });
-  
+
       Plotly.newPlot('scatter-chart', scatterChartData.data, scatterChartData.layout)
         .then(function () {
           const currentTheme = localStorage.getItem('theme') || 'light-mode';
           updateChartColors(currentTheme);
         });
-  
+
       Plotly.newPlot('pie-chart', pieChartData.data, pieChartData.layout)
         .then(function () {
           const currentTheme = localStorage.getItem('theme') || 'light-mode';
           updateChartColors(currentTheme);
         });
-  
+
       $('#toggle-theme').on('click', function () {
         document.body.classList.toggle('dark-mode');
         const currentTheme = document.body.classList.contains('dark-mode') ? 'dark-mode' : 'light-mode';
         localStorage.setItem('theme', currentTheme);
         updateChartColors(currentTheme);
       });
-  
-      // Função para capturar a largura da tela e armazenar no sessionStorage
-      function salvarLarguraTela() {
-          const screenWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
-          sessionStorage.setItem('screenWidth', screenWidth);
-      }
 
-      // Chama a função ao carregar a página
-      document.addEventListener("DOMContentLoaded", function() {
-          salvarLarguraTela();
-      });
-  
       // --- Funções do Chat com persistência de histórico ---
-  
       function loadChatHistory() {
         var storedHistory = localStorage.getItem('chatHistory');
         if (storedHistory) {
           document.getElementById('chat-messages').innerHTML = storedHistory;
         }
       }
-  
+
       function saveChatHistory() {
         var chatContent = document.getElementById('chat-messages').innerHTML;
         localStorage.setItem('chatHistory', chatContent);
       }
-  
+
       function clearChat() {
         document.getElementById('chat-messages').innerHTML = "";
         localStorage.removeItem('chatHistory');
       }
       window.clearChat = clearChat;
-  
+
       function toggleChat() {
         var chatOverlay = document.getElementById("chat-overlay");
         var chatMessages = document.getElementById("chat-messages");
 
         if (chatOverlay.style.display === "none" || chatOverlay.style.display === "") {
-            chatOverlay.style.display = "block";
+          chatOverlay.style.display = "block";
 
-            // Se o chat está sendo aberto pela primeira vez na sessão, exibir mensagens de boas-vindas
-            if (!sessionStorage.getItem("chatOpened")) {
-                chatMessages.innerHTML = ""; // Limpa mensagens antigas antes de exibir as saudações
+          // Se o chat está sendo aberto pela primeira vez na sessão, exibir mensagens de boas-vindas
+          if (!sessionStorage.getItem("chatOpened")) {
+            chatMessages.innerHTML = ""; // Limpa mensagens antigas antes de exibir as saudações
 
-                var botDiv1 = document.createElement("div");
-                botDiv1.classList.add("chat-message", "bot");
-                botDiv1.textContent = "Bem-vindo ao chatbot! Envie uma mensagem para começar.";
+            var botDiv1 = document.createElement("div");
+            botDiv1.classList.add("chat-message", "bot");
+            botDiv1.textContent = "Bem-vindo ao chatbot! Envie uma mensagem para começar.";
 
-                var botDiv2 = document.createElement("div");
-                botDiv2.classList.add("chat-message", "bot");
-                botDiv2.textContent = "Se precisar de ajuda, basta perguntar!";
+            var botDiv2 = document.createElement("div");
+            botDiv2.classList.add("chat-message", "bot");
+            botDiv2.textContent = "Se precisar de ajuda, basta perguntar!";
 
-                chatMessages.appendChild(botDiv1);
-                chatMessages.appendChild(botDiv2);
+            chatMessages.appendChild(botDiv1);
+            chatMessages.appendChild(botDiv2);
 
-                sessionStorage.setItem("chatOpened", "true"); // Marca que o chat foi aberto
-                saveChatHistory();
-            } else {
-                // Carregar histórico do chat caso já tenha sido aberto antes
-                loadChatHistory();
-            }
+            sessionStorage.setItem("chatOpened", "true"); // Marca que o chat foi aberto
+            saveChatHistory();
+          } else {
+            // Carregar histórico do chat caso já tenha sido aberto antes
+            loadChatHistory();
+          }
         } else {
-            chatOverlay.style.display = "none";
-            sessionStorage.removeItem("chatOpened"); // Remove a marcação ao fechar o chat
+          chatOverlay.style.display = "none";
+          sessionStorage.removeItem("chatOpened"); // Remove a marcação ao fechar o chat
         }
-    }
-
-
-
+      }
       window.toggleChat = toggleChat;
-  
+
       function handleKeyPress(event) {
         if (event.key === "Enter") {
           sendMessage();
         }
       }
       window.handleKeyPress = handleKeyPress;
-  
+
       function sendMessage() {
-    var inputField = document.getElementById("chat-input");
-    var userMessage = inputField.value.trim();
-    if (userMessage === "") return;
+        var inputField = document.getElementById("chat-input");
+        var userMessage = inputField.value.trim();
+        if (userMessage === "") return;
 
-    var chatMessages = document.getElementById("chat-messages");
+        var chatMessages = document.getElementById("chat-messages");
 
-    // Cria e adiciona o elemento para a mensagem do usuário
-    var userDiv = document.createElement("div");
-    userDiv.classList.add("chat-message", "user");
-    userDiv.textContent = userMessage;
-    chatMessages.appendChild(userDiv);
-    saveChatHistory();
+        // Cria e adiciona o elemento para a mensagem do usuário
+        var userDiv = document.createElement("div");
+        userDiv.classList.add("chat-message", "user");
+        userDiv.textContent = userMessage;
+        chatMessages.appendChild(userDiv);
+        saveChatHistory();
 
-    // Envia a mensagem para o backend (rota /chatbot)
-    fetch("/chatbot", {
-        method: "POST",
-        body: JSON.stringify({ mensagem: userMessage }),
-        headers: { "Content-Type": "application/json" }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.respostas) {
-            data.respostas.forEach(function(resp) {
+        // Envia a mensagem para o backend (rota /chatbot)
+        fetch("/chatbot", {
+          method: "POST",
+          body: JSON.stringify({ mensagem: userMessage }),
+          headers: { "Content-Type": "application/json" }
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.respostas) {
+              data.respostas.forEach(function (resp) {
                 var botDiv = document.createElement("div");
                 botDiv.classList.add("chat-message", "bot");
                 // Se o tipo for "table", insere como HTML para renderizar a tabela;
                 // caso contrário, insere como texto.
                 if (resp.tipo === "table") {
-                    botDiv.innerHTML = resp.mensagem;
+                  botDiv.innerHTML = resp.mensagem;
                 } else {
-                    botDiv.textContent = resp.mensagem;
+                  botDiv.textContent = resp.mensagem;
                 }
                 chatMessages.appendChild(botDiv);
-            });
-        }
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-        saveChatHistory();
-    })
-    .catch(error => console.error("Erro ao enviar mensagem:", error));
+              });
+            }
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            saveChatHistory();
+          })
+          .catch(error => console.error("Erro ao enviar mensagem:", error));
 
-    inputField.value = "";
-}
-
-
+        inputField.value = "";
+      }
       window.sendMessage = sendMessage;
-  
+
       loadChatHistory();
     });
   </script>

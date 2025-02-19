@@ -6,6 +6,7 @@ import warnings
 import plotly.graph_objs as go
 import plotly
 from datetime import datetime, timedelta
+import calendar
 import os
 from rich import print as rprint
 import click
@@ -792,7 +793,15 @@ def controlar_presenca():
         return redirect(url_for('adiciona_presenca'))
 
     try:
-        data_selecionada = datetime(int(ano), int(mes), int(dia))
+        ano = int(ano)
+        mes = int(mes)
+        dia = int(dia)
+        
+        if mes == 2 and dia in [29, 30, 31] and not calendar.isleap(ano):
+            flash(f"O ano {ano} não é bissexto, portanto, fevereiro não pode ter mais de 28 dias.", "error")
+            return redirect(url_for('adiciona_presenca'))
+        
+        data_selecionada = datetime(ano, mes, dia)
         dia_semana = data_selecionada.weekday()
 
         if dia_semana >= 5:
