@@ -419,7 +419,29 @@
       window.sendMessage = sendMessage;
 
       loadChatHistory();
+
+      document.addEventListener("DOMContentLoaded", function() {
+            // Verifique se a largura da tela já está armazenada
+            const screenWidth = sessionStorage.getItem('screenWidth');
+
+            if (screenWidth) {
+                // Envia o valor de screenWidth ao backend
+                fetch("/capturar_largura_tela", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ screenWidth: screenWidth })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Largura do gráfico recebida do backend:", data.larguraGrafico);
+                })
+                .catch(error => console.error("Erro ao enviar a largura da tela:", error));
+            }
+        });
     });
+    
   </script>
 </body>
 </html>
