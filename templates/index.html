@@ -111,12 +111,11 @@
           </div>
           <div>
             <label for="ano">Selecione o Ano:</label>
-            <select id="ano" name="ano">
-              <option value="">-- Escolha um Ano --</option>
-              {% for ano in range(2024, 2100) %}
-                <option value="{{ ano }}" {% if ano == selected_ano %}selected{% endif %}>
-                  {{ ano }}
-                </option>
+            <select id="ano" name="ano" multiple="multiple">
+              {% for ano in anos %}
+                  <option value="{{ ano }}" {% if ano in selected_ano %}selected{% endif %}>
+                      {{ ano }}
+                  </option>
               {% endfor %}
             </select>
           </div>
@@ -217,6 +216,7 @@
       $('#nomes').select2({ placeholder: "Escolha um nome" });
       $('#meses').select2({ placeholder: "Escolha um mês" });
       $('#presenca').select2({ placeholder: "Escolha uma presença" });
+      $('#ano').select2({ placeholder: "Escolha um ano" });
 
       function submitWithSiteEmpresa() {
         const site = $('#site').val();

@@ -229,7 +229,7 @@ def index():
     # Captura os valores dos filtros
     selected_site = request.form.get("site") or session.get('selected_site')
     selected_empresa = request.form.get("empresa") or session.get('selected_empresa')
-    selected_ano = request.form.get("ano")  # Captura o valor do ano selecionado
+    selected_ano = request.form.getlist("ano")  # Captura o valor do ano selecionado
     largura_grafico = session.get('larguraGrafico') 
     # Salva os valores na sessão
     if selected_site:
@@ -259,6 +259,14 @@ def index():
     selected_nomes = request.form.getlist("nomes")
     selected_meses = request.form.getlist("meses")
     selected_presenca = request.form.getlist("presenca")
+
+    # Buscar os anos distintos no banco de dados (Ajuste para Microsoft Access)
+    query_anos = """
+        SELECT Ano 
+        FROM (SELECT DISTINCT YEAR(Data) as Ano FROM Controle) AS subquery 
+        ORDER BY Ano DESC
+    """
+    anos = pd.read_sql(query_anos, conn)['Ano'].astype(str).tolist()
 
 
     empresas = []
@@ -297,10 +305,19 @@ def index():
             """
             query_params = [get_site_id(selected_site), get_empresa_id(selected_empresa, empresas)]
                 
-            # Filtro de ano
-            if selected_ano:
-                query += " AND YEAR(Controle.Data) = ?"
-                query_params.append(selected_ano)
+            # Verifica se algum ano foi selecionado
+            if selected_ano and len(selected_ano) > 0:
+                if len(selected_ano) == 1:
+                    # Apenas um ano selecionado -> Filtro direto
+                    query += " AND YEAR(Controle.Data) = ?"
+                    query_params.append(selected_ano[0])  # Adiciona o único ano
+                else:
+                    # Vários anos selecionados -> Criando placeholders dinâmicos
+                    anos_placeholder = ",".join(["?"] * len(selected_ano))
+                    query += f" AND YEAR(Controle.Data) IN ({anos_placeholder})"
+                    query_params.extend(selected_ano)  # Adiciona todos os anos na lista de parâmetros
+
+
 
             cursor = conn.cursor()
             cursor.execute(query, query_params)
@@ -323,6 +340,8 @@ def index():
                 if selected_meses:
                     selected_meses_numeric = [meses_dict[mes] for mes in selected_meses]
                     df = df[df['Data'].dt.strftime('%m').isin(selected_meses_numeric)]
+                if selected_ano and len(selected_ano) > 0:
+                    df = df[df['Data'].dt.year.astype(str).isin(selected_ano)]
 
                 # Gera uma lista contínua de datas entre o menor e o maior valor de data
                 min_data = df['Data'].min()
@@ -340,8 +359,12 @@ def index():
                 # Faz o merge do DataFrame original com o DataFrame contínuo
                 df_merge = pd.merge(df_continuo, df, on=['Nome', 'Data'], how='left')
 
+                # 🔹 Aplicando filtro explícito de ano no DataFrame dos gráficos
+                if selected_ano and len(selected_ano) > 0:
+                    df_merge = df_merge[df_merge['Data'].dt.year.astype(str).isin(selected_ano)]
+
                 # Preenche valores ausentes com "invisível" ou algum valor placeholder
-                df_merge['Presenca'].fillna('invisível', inplace=True)
+                df_merge['Presenca'] = df_merge['Presenca'].fillna('invisível')
 
                 # Gráfico de dispersão
                 fig_dispersao = go.Figure()
@@ -514,6 +537,7 @@ def index():
         total_faltas=total_faltas,
         total_atestados=total_atestados,
         color_marker_map=color_marker_map,
+        anos=anos,
         selected_ano=selected_ano,
     )
 
