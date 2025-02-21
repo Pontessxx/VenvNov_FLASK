@@ -12,9 +12,11 @@ function saveChatHistory() {
 }
 
 function clearChat() {
-    document.getElementById('chat-messages').innerHTML = "";
-    localStorage.removeItem('chatHistory');
+  document.getElementById('chat-messages').innerHTML = "";
+  localStorage.removeItem('chatHistory');
+  sessionStorage.removeItem("chatOpened"); // Remove a flag de chat aberto
 }
+
 window.clearChat = clearChat;
 
 function toggleChat() {
@@ -24,15 +26,11 @@ function toggleChat() {
   if (chatOverlay.style.display === "none" || chatOverlay.style.display === "") {
       chatOverlay.style.display = "block";
 
-      // Primeiro, tenta carregar o histórico salvo
       var storedHistory = localStorage.getItem('chatHistory');
-      if (storedHistory && storedHistory.trim() !== "") {
-          chatMessages.innerHTML = storedHistory; // Carrega o histórico se existir
-      }
 
-      // Se o chat está sendo aberto pela primeira vez na sessão e não há histórico salvo, exibir mensagens de boas-vindas
-      if (!sessionStorage.getItem("chatOpened") && (!storedHistory || storedHistory.trim() === "")) {
-          chatMessages.innerHTML = ""; // Limpa mensagens antigas antes de exibir as saudações
+      // Se não há histórico salvo, ou o chat foi limpo, exibe mensagem de boas-vindas
+      if (!storedHistory || storedHistory.trim() === "") {
+          chatMessages.innerHTML = ""; // Limpa mensagens antigas
 
           var botDiv1 = document.createElement("div");
           botDiv1.classList.add("chat-message", "bot");
@@ -46,6 +44,8 @@ function toggleChat() {
           chatMessages.appendChild(botDiv2);
 
           saveChatHistory();
+      } else {
+          chatMessages.innerHTML = storedHistory; // Carrega o histórico se existir
       }
 
       sessionStorage.setItem("chatOpened", "true"); // Marca que o chat foi aberto
