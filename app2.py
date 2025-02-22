@@ -288,6 +288,7 @@ def index():
     total_faltas = 0
     total_atestados = 0
     nomes = []
+    
     # Executa a consulta SQL somente se site e empresa forem selecionados
     if selected_site and selected_empresa:
         try:
@@ -512,6 +513,8 @@ def index():
 
                 # Formatar a coluna 'Data' para o formato 'dd/mm/yyyy' para a tabela
                 df['Data'] = df['Data'].dt.strftime('%d/%m/%Y')
+        
+            nomes = get_nomes(siteempresa_id, ativos=True) + get_nomes(siteempresa_id, ativos=False) if siteempresa_id else []
 
         except Exception as e:
             print(f"Erro ao consultar ou criar DataFrame: {e}")
@@ -520,7 +523,7 @@ def index():
         "index.html",
         sites=sites,
         empresas=[e[1] for e in empresas],
-        nomes = get_nomes(siteempresa_id, ativos=True) + get_nomes(siteempresa_id, ativos=False),
+        nomes = nomes,
         meses=meses_dict.keys(),
         presencas=pres,
         selected_site=selected_site,
@@ -710,6 +713,84 @@ def adiciona_presenca():
     current_month = datetime.now().strftime("%m")
 
     conn.close()
+    # Garante que o gráfico seja gerado apenas se houver registros
+    if registros_mes_atual:
+        df = pd.DataFrame(registros_mes_atual, columns=['Nome', 'Presenca', 'Data'])
+        
+        # Converte a coluna 'Data' para datetime
+        df['Data'] = pd.to_datetime(df['Data'], format='%Y-%m-%d %H:%M:%S')
+
+        # Gera uma lista contínua de datas entre o menor e o maior valor de data
+        min_data = df['Data'].min()
+        max_data = df['Data'].max()
+        datas_continuas = pd.date_range(min_data, max_data).to_list()
+
+        # Cria um DataFrame contínuo para evitar lacunas no gráfico
+        nomes_unicos = df['Nome'].unique()
+        df_continuo = pd.MultiIndex.from_product([nomes_unicos, datas_continuas], names=['Nome', 'Data']).to_frame(index=False)
+
+        # Converte ambas as colunas 'Data' para datetime para garantir a compatibilidade no merge
+        df_continuo['Data'] = pd.to_datetime(df_continuo['Data'])
+        df['Data'] = pd.to_datetime(df['Data'])
+
+        # Faz o merge do DataFrame original com o DataFrame contínuo
+        df_merge = pd.merge(df_continuo, df, on=['Nome', 'Data'], how='left')
+
+        # Preenche valores ausentes com "invisível" para manter a estrutura do gráfico
+        df_merge['Presenca'].fillna('invisível', inplace=True)
+
+        # Criando o gráfico de dispersão
+        fig_dispersao = go.Figure()
+
+        for presenca, info in color_marker_map.items():
+            df_tipo = df_merge[df_merge['Presenca'].str.upper() == presenca]
+            if not df_tipo.empty:
+                fig_dispersao.add_trace(go.Scatter(
+                    x=df_tipo['Data'],
+                    y=df_tipo['Nome'],
+                    mode='markers',
+                    marker=dict(color=info['cor'], symbol=info['marker'], size=10),
+                    name=presenca
+                ))
+
+        # Adicionar pontos invisíveis para garantir espaçamento correto no gráfico
+        df_invisivel = df_merge[df_merge['Presenca'] == 'invisível']
+        fig_dispersao.add_trace(go.Scatter(
+            x=df_invisivel['Data'],
+            y=df_invisivel['Nome'],
+            mode='markers',
+            marker=dict(color='rgba(0,0,0,0)', size=10),
+            name='invisível',
+            showlegend=False
+        ))
+
+        # Layout do gráfico igual ao da página principal
+        fig_dispersao.update_layout(
+            title={
+                #'text': "Gráfico de Dispersão de Presenças",
+                'x': 0.5,
+                'xanchor': 'center',
+                'yanchor': 'top',
+                'font': {'size': 24}
+            },
+            xaxis=dict(
+                showgrid=False,
+                gridcolor='lightgray',
+                tickformat='%d/%m/%Y',
+                dtick=86400000
+            ),
+            yaxis=dict(showgrid=False, gridcolor='lightgray'),
+            font=dict(color='#000000'),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            hovermode='closest'
+        )
+
+        # Converte o gráfico para JSON e passa para o template
+        scatter_chart_data = json.dumps(fig_dispersao, cls=plotly.utils.PlotlyJSONEncoder)
+    else:
+        scatter_chart_data = None  # Se não houver dados, evita erro
+
 
     # Renderiza o template HTML
     return render_template(
@@ -730,6 +811,7 @@ def adiciona_presenca():
         registros_mes_atual=registros_mes_atual,
         meses_dict=meses_dict,
         color_marker_map=color_marker_map,
+        scatter_chart_data=scatter_chart_data,
     )
 
 

@@ -495,7 +495,6 @@ input[type="checkbox"] {
 
 }
 
- 
 
 /* Estilizando o label como uma checkbox */
 
@@ -568,7 +567,9 @@ input[type="checkbox"]:checked + .checkbox_span::after {
 }
 
  
-
+.titulo_grafico{
+    margin-top: 3em;
+}
 .content-table {
     width: 100%;
     border-collapse: collapse;

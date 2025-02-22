@@ -9,6 +9,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <link rel="stylesheet" href="../static/styles.css">
 </head>
 <body>
@@ -120,6 +121,10 @@
             </div>
            
         </form>
+        <div class="scatter-chart-container">
+            <h2 class="titulo_grafico">Grafico de registro: {{ current_month }}/{{ current_year }}</h2>
+            <div id="scatter-chart"></div>
+        </div>
 
         <section class="tabela_adiciona">
             <h2>Registros do Mês Atual: {{ current_month }}/{{ current_year }}</h2>
@@ -152,6 +157,7 @@
             </div>
 
         </section>
+
 
         <section class="container_group">
             <div class="forms_nome">
@@ -322,6 +328,23 @@
                 $('#siteFormAdiciona').submit();
             });
            
+        });
+        // Função para atualizar as cores dos gráficos com base no tema
+        function updateChartColors(theme) {
+            let textColor = theme === 'dark-mode' ? '#ffffff' : '#000000';
+            if (
+            document.getElementById('scatter-chart')
+            ) {
+            Plotly.relayout('scatter-chart', { 'font.color': textColor });
+            }
+        }
+        
+        var scatterChartData = {{ scatter_chart_data | safe }};
+
+        Plotly.newPlot('scatter-chart', scatterChartData.data, scatterChartData.layout)
+        .then(function () {
+          const currentTheme = localStorage.getItem('theme') || 'light-mode';
+          updateChartColors(currentTheme);
         });
         // Verifica o tema salvo no localStorage e aplica as cores
         (function() {
