@@ -40,8 +40,23 @@ function toggleChat() {
           botDiv2.classList.add("chat-message", "bot");
           botDiv2.textContent = "Se precisar de ajuda, basta perguntar!";
 
+          var botDiv3 = document.createElement("div");
+          botDiv3.classList.add("chat-message", "bot");
+          botDiv3.innerHTML = `
+            <strong>Sugestões de perguntas:</strong><br>
+            <span class="highlight-grey">! Apenas trabalho com períodos de MM/AAAA, ou só o mês (seja o mês por nome ou numeral) e/ou ano completo.</span><br><br>
+            • Listagem de nomes<br>
+            • Nome com mais <span class="highlight-blue">[tipo de presença]</span> em <span class="highlight-blue">[período]</span><br>
+            • Presença geral em <span class="highlight-blue">[período]</span><br>
+            • <span class="highlight-blue">[Nome]</span> teve presença em <span class="highlight-blue">[período]</span><br>
+            • Quantas <span class="highlight-blue">[tipo de presença]</span> teve <span class="highlight-blue">[Nome]</span> em <span class="highlight-blue">[período]</span><br>
+        `;
+      
+
+
           chatMessages.appendChild(botDiv1);
           chatMessages.appendChild(botDiv2);
+          chatMessages.appendChild(botDiv3);
 
           saveChatHistory();
       } else {

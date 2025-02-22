@@ -21,6 +21,8 @@
     --bot-msg-bg: #f1f0f0;
     --bot-msg-color: #000000;
     --user-msg-bg: #007bff;
+    --chatbot-header: #007bff;
+    --chatbot-hover-btn: #0056b3;
     --user-msg-color: #ffffff;
 }
 
@@ -46,6 +48,8 @@
     --bot-msg-bg: #333333;
     --bot-msg-color: #ffffff;
     --user-msg-bg: #1a73e8;
+    --chatbot-header: #007bff;
+    --chatbot-hover-btn: #0056b3;
     --user-msg-color: #ffffff;
 }
 *{
@@ -566,7 +570,15 @@ input[type="checkbox"]:checked + .checkbox_span::after {
 
 }
 
- 
+.highlight-blue {
+    color: rgba(70, 130, 180, 0.8); /* Azul opaco (cor base: SteelBlue) */
+    font-weight: bold;
+}
+.highlight-grey {
+    color: rgba(174, 62, 62, 0.8); /* Azul opaco (cor base: SteelBlue) */
+    font-weight: bold;
+}
+
 .titulo_grafico{
     margin-top: 3em;
 }
@@ -631,7 +643,7 @@ input[type="checkbox"]:checked + .checkbox_span::after {
 
 /* Estilização do cabeçalho do chat */
 #chat-header {
-    background-color: #007bff;
+    background-color: var(--chatbot-header);
     color: white;
     padding: 10px;
     text-align: center;
@@ -699,7 +711,7 @@ input[type="checkbox"]:checked + .checkbox_span::after {
     margin-left: 5px; /* Espaço entre o input e os botões */
     padding: 10px 15px;
     border: none;
-    background-color: #007bff;
+    background-color: var(--chatbot-header);
     color: white;
     cursor: pointer;
     border-radius: 5px;
@@ -707,7 +719,7 @@ input[type="checkbox"]:checked + .checkbox_span::after {
 }
 
 #chat-input-area button:hover {
-    background-color: #0056b3;
+    background-color: var(--chatbot-hover-btn);
 }
 
 /* Botão de abrir chat */

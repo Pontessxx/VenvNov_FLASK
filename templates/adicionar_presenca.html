@@ -309,6 +309,26 @@
     </div>
 
 
+    <!-- Botão para abrir o chat -->
+    <div id="chat-button" onclick="toggleChat()">💬 Chat</div>
+
+    <!-- Overlay que cobre toda a tela -->
+    <div id="chat-overlay">
+    <!-- Pop-up do Chat, centralizado dentro do overlay -->
+    <div id="chat-popup">
+        <div id="chat-header">
+            <span>Chatbot</span>
+            <button id="chat-close" onclick="toggleChat()">❌</button>
+        </div>
+        <div id="chat-messages"></div>
+        <div id="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Digite sua mensagem..." onkeypress="handleKeyPress(event)">
+            <button id="send-chat" onclick="sendMessage()">Enviar</button>
+            <!-- Botão de limpar o chat (ícone de reload) -->
+            <button id="clear-chat" onclick="clearChat()" title="Limpar Chat">&#x21bb;</button>
+        </div>
+    </div>
+    </div>
 
     
 
@@ -378,6 +398,7 @@
         }
         
     </script>
+    <script src="../static/chatbot.js"></script>
     
 </body>
 </html>

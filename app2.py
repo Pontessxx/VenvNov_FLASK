@@ -11,6 +11,7 @@ import os
 from rich import print as rprint
 import click
 import logging
+import re
 
 import difflib
 import spacy
@@ -1332,9 +1333,21 @@ def processar_mensagem(mensagem):
     nome_input = None
     periodo = []
     tipo_frequencia = None
-
+    
+    padrao_data = re.compile(r"(\b\d{1,2})/(\d{4}\b)")
+    match_data = padrao_data.search(mensagem)
+    if match_data:
+        mes = match_data.group(1).zfill(2)  # Garante que o mês tenha dois dígitos
+        ano = match_data.group(2)
+        periodo.append(mes)
+        periodo.append(ano)
+        
     for token in doc:
         palavra = token.text.lower()
+        
+        # Ignora palavras que já foram processadas pela regex de data
+        if match_data and palavra in match_data.groups():
+            continue
 
         # Verifica se a palavra representa um mês (abreviado ou completo) e converte para número
         if palavra in meses_map:
