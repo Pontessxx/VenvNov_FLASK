@@ -13,7 +13,6 @@ import click
 import logging
 import re
 import difflib
-from bs4 import BeautifulSoup
 
 import nltk
 from nltk.tokenize import word_tokenize
@@ -1638,126 +1637,111 @@ def consulta_todas_presencas_periodo(periodo):
     
     return executar_consulta(query, params, f"Todas as presenças registradas no período {periodo}")
 
+def consulta_resumo_mensal(periodo):
+    """
+    Retorna um resumo mensal das presenças, faltas, atestados e outros tipos de presença.
+    """
+    query = """
+        SELECT Presenca.Presenca, COUNT(Controle.id_Controle) AS Total
+        FROM Controle
+        INNER JOIN Presenca ON Controle.id_Presenca = Presenca.id_Presenca
+        WHERE FORMAT(Controle.Data, 'mm/yyyy') = ?
+        GROUP BY Presenca.Presenca
+    """
+    
+    params = [f"{periodo[0]}/{periodo[1]}"]  # Formata como MM/YYYY
 
+    return executar_consulta(query, params, f"Resumo Mensal de {periodo[0]}/{periodo[1]}")
+
+def gerar_resumo_mensal(mensagem_usuario):
+    """
+    Lida com a solicitação de resumo mensal e retorna a resposta apropriada.
+    """
+    processamento = processar_mensagem(mensagem_usuario)
+
+    if processamento["periodo"]:
+        # Se apenas um dos períodos (mês ou ano) foi passado, retorna erro
+        if len(processamento["periodo"]) == 1:
+            return [{"tipo": "text", "mensagem": "Por favor, forneça tanto o mês quanto o ano para o resumo. Exemplo: 'resumo de janeiro de 2025'"}]
+
+        # Se o usuário forneceu mês e ano corretamente, usa esse período
+        periodo = processamento["periodo"]
+    else:
+        # Se não passou período, usa o mês e ano atuais
+        periodo = [datetime.now().strftime("%m"), datetime.now().strftime("%Y")]
+
+    return [{"tipo": "table", "mensagem": consulta_resumo_mensal(periodo)}]
 
 # CHATBOT_FUNCTION
 @app.route("/chatbot", methods=["GET", "POST"])
 def chatbot():
     """ Rota para processar mensagens do chat """
-    if request.method == "POST":
-        dados = request.get_json()
-        mensagem_usuario = dados.get("mensagem", "").strip()
-        
-        respostas = []  # Lista que armazenará cada mensagem a ser retornada
+    if request.method != "POST":
+        return jsonify({"respostas": [{"tipo": "text", "mensagem": "Bem-vindo ao chatbot! Envie uma mensagem para começar."}]})
 
-        # Verifica se o usuário quer encerrar a conversa
-        if mensagem_usuario.lower() in ["sair", "exit", "quit", "tchau", "até logo", "adeus", "encerrar"]:
-            respostas.append({
-                "tipo": "text",
-                "mensagem": "Até logo! Foi um prazer ajudar você."
-            })
-            return jsonify({"respostas": respostas})
-        
-        match = difflib.get_close_matches(mensagem_usuario.lower(), saudacoes_validas, n=1)
-        if match:
-            respostas.append({
-                "tipo": "text",
-                "mensagem": "Olá! Como posso ajudar você hoje?"
-            })
-            return jsonify({"respostas": respostas})
-        
-        # Se o usuário pedir a lista de nomes disponíveis
-        if difflib.get_close_matches(mensagem_usuario, LISTAGEM_NOMES, n=1, cutoff=0.6):
-            lista_nomes = listar_nomes_disponiveis()  # Supondo que essa função retorne uma string ou lista formatada
-            respostas.append({
-                "tipo": "text",
-                "mensagem": "Claro! Aqui estão os nomes disponíveis:"
-            })
-            respostas.append({
-                "tipo": "table",
-                "mensagem": lista_nomes
-            })
+    dados = request.get_json()
+    mensagem_usuario = dados.get("mensagem", "").strip().lower()
+    
+    # Dicionário de respostas para comandos diretos
+    comandos = {
+        "sair": lambda: [{"tipo": "text", "mensagem": "Até logo! Foi um prazer ajudar você."}],
+        "saudacao": lambda: [{"tipo": "text", "mensagem": "Olá! Como posso ajudar você hoje?"}],
+        "listar_nomes": lambda: [
+            {"tipo": "text", "mensagem": "Claro! Aqui estão os nomes disponíveis:"},
+            {"tipo": "table", "mensagem": listar_nomes_disponiveis()}
+        ],
+        "resumo_mensal": lambda: gerar_resumo_mensal(mensagem_usuario)
+    }
 
-        # Processa a mensagem para extrair os parâmetros
-        processamento = processar_mensagem(mensagem_usuario)
-        
-        # Caso seja uma pergunta de ajuda, retorna a resposta imediatamente e encerra
-        if processamento["tipo"] == "ajuda":
-            return jsonify({"respostas": [{"tipo": "text", "mensagem": processamento["mensagem"]}]})
+    # Verifica se o usuário deseja sair
+    if mensagem_usuario in ["sair", "exit", "quit", "tchau", "até logo", "adeus", "encerrar"]:
+        return jsonify({"respostas": comandos["sair"]()})
+    
+    # Verifica se é uma saudação
+    if difflib.get_close_matches(mensagem_usuario, saudacoes_validas, n=1):
+        return jsonify({"respostas": comandos["saudacao"]()})
+    
+    # Verifica se o usuário pediu a lista de nomes
+    if difflib.get_close_matches(mensagem_usuario, LISTAGEM_NOMES, n=1, cutoff=0.6):
+        return jsonify({"respostas": comandos["listar_nomes"]()})
+    
+    # Processa a mensagem para extrair parâmetros
+    processamento = processar_mensagem(mensagem_usuario)
 
-        # Dependendo dos dados extraídos, chame a consulta apropriada.
-        if processamento["nome_input"] and processamento["tipo_frequencia"] and processamento["periodo"]:
-            resultado = consulta_presencas(
-                processamento["nome_input"],
-                processamento["periodo"],
-                processamento["tipo_frequencia"]
-            )
-            respostas.append({
-                "tipo": "table",
-                "mensagem": resultado
-            })
-        elif processamento["tipo_frequencia"]:
-            resultado = consulta_nome_mais_presencas(
-                processamento["tipo_frequencia"],
-                processamento["periodo"]
-            )
-            respostas.append({
-                "tipo": "table",
-                "mensagem": resultado
-            })
-            resultado_dois = consulta_nome_mais_presenca_msg(
-                processamento["tipo_frequencia"],
-                processamento["periodo"]
-            )
+    # Verifica se é um pedido de resumo mensal
+    if difflib.get_close_matches(mensagem_usuario, ["resumo do mês", "resumo mensal", "dados do mês", "estatísticas do mês"], n=1, cutoff=0.6):
+        return jsonify({"respostas": comandos["resumo_mensal"]()})
+    
+    # Se for uma pergunta de ajuda, retorna a resposta correspondente
+    if processamento["tipo"] == "ajuda":
+        return jsonify({"respostas": [{"tipo": "text", "mensagem": processamento["mensagem"]}]})
+    
+    # Dicionário de consultas SQL associadas aos parâmetros detectados
+    consultas_sql = {
+        (True, True, True): lambda: consulta_presencas(
+            processamento["nome_input"], processamento["periodo"], processamento["tipo_frequencia"]
+        ),
+        (False, True, True): lambda: consulta_nome_mais_presencas(
+            processamento["tipo_frequencia"], processamento["periodo"]
+        ),
+        (True, False, True): lambda: consulta_presenca_por_nome(
+            processamento["nome_input"], processamento["periodo"]
+        ),
+        (False, True, False): lambda: consulta_por_presenca_e_periodo(
+            processamento["tipo_frequencia"], processamento["periodo"]
+        ),
+        (True, False, False): lambda: consulta_todas_presencas(processamento["nome_input"]),
+        (False, False, True): lambda: consulta_todas_presencas_periodo(processamento["periodo"])
+    }
 
-            respostas.append({
-                "tipo": "text",
-                "mensagem": f'{resultado_dois[0]} teve mais {resultado_dois[1]} no mês de {resultado_dois[2]} com um total de {resultado_dois[3]} presenças.'
-            })
-        elif processamento["nome_input"] and processamento["periodo"]:
-            resultado = consulta_presenca_por_nome(
-                processamento["nome_input"],
-                processamento["periodo"]
-            )
-            respostas.append({
-                "tipo": "table",
-                "mensagem": resultado
-            })
-        elif processamento["tipo_frequencia"] and processamento["periodo"]:
-            resultado = consulta_por_presenca_e_periodo(
-                processamento["tipo_frequencia"],
-                processamento["periodo"]
-            )
-            respostas.append({
-                "tipo": "table",
-                "mensagem": resultado
-            })
-        elif processamento["nome_input"] and not processamento["tipo_frequencia"] and not processamento["periodo"]:
-            resultado = consulta_todas_presencas(processamento["nome_input"])
-            respostas.append({
-                "tipo": "table",
-                "mensagem": resultado
-            })
-        elif processamento["periodo"] and not processamento["nome_input"] and not processamento["tipo_frequencia"]:
-            resultado = consulta_todas_presencas_periodo(processamento["periodo"])
-            respostas.append({
-                "tipo": "table",
-                "mensagem": resultado
-            })
-        
-        # Caso nenhuma condição tenha sido satisfeita, envie uma mensagem padrão.
-        if not respostas:
-            respostas.append({
-                "tipo": "text",
-                "mensagem": "Desculpe, não entendi sua solicitação. Poderia reformular?"
-            })
-        
-        return jsonify({"respostas": respostas})
-
-    # Para requisição GET, envia uma mensagem padrão.
-    return jsonify({"respostas": [{"tipo": "text", "mensagem": "Bem-vindo ao chatbot! Envie uma mensagem para começar."}]})
-
-
+    # Executa a consulta correta com base nos parâmetros extraídos
+    chave = (bool(processamento["nome_input"]), bool(processamento["tipo_frequencia"]), bool(processamento["periodo"]))
+    if chave in consultas_sql:
+        resultado = consultas_sql[chave]()
+        return jsonify({"respostas": [{"tipo": "table", "mensagem": resultado}]})
+    
+    # Resposta padrão caso não haja correspondência
+    return jsonify({"respostas": [{"tipo": "text", "mensagem": "Desculpe, não entendi sua solicitação. Poderia reformular?"}]})
 
 
 if __name__ == "__main__":
