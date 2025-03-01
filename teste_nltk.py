@@ -3,21 +3,26 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk import pos_tag
 
-# Lista de pacotes necessários e seus respectivos caminhos dentro do nltk_data
-required_packages = {
-    "punkt": "tokenizers/punkt",
-    "stopwords": "corpora/stopwords",
-    "averaged_perceptron_tagger": "taggers/averaged_perceptron_tagger"
-}
+def verificar_e_instalar_nltk():
+    """Verifica se os pacotes do NLTK estão instalados e os baixa apenas se necessário."""
+    required_packages = {
+        "punkt": "tokenizers/punkt",
+        "punkt_tab": "tokenizers/punkt_tab",
+        "stopwords": "corpora/stopwords",
+        "averaged_perceptron_tagger": "taggers/averaged_perceptron_tagger",
+        "averaged_perceptron_tagger_eng": "taggers/averaged_perceptron_tagger_eng"
+    }
 
-# Verifica se os pacotes já estão instalados e baixa apenas os ausentes
-for package, path in required_packages.items():
-    try:
-        nltk.data.find(path)
-        print(f"✔ {package} já está instalado.")
-    except LookupError:
-        print(f"⬇ Baixando {package}...")
-        nltk.download(package)
+    for package, path in required_packages.items():
+        try:
+            nltk.data.find(path)
+            print(f"✔ {package} já está instalado.")
+        except LookupError:
+            print(f"⬇ Baixando {package}...")
+            nltk.download(package)
+
+# Chama a função para garantir que os pacotes estão disponíveis
+verificar_e_instalar_nltk()
 
 # Exemplo de uso com um texto em português
 texto = "Este é um teste simples para tokenização e remoção de stopwords."

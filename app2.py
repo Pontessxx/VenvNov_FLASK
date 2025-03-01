@@ -12,14 +12,31 @@ from rich import print as rprint
 import click
 import logging
 import re
-
 import difflib
-import spacy
 from bs4 import BeautifulSoup
 
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
 
-# Carregar o modelo SpaCy
-nlp = spacy.load("pt_core_news_sm")
+def verificar_e_instalar_nltk():
+    """Verifica se os pacotes do NLTK estão instalados e os baixa apenas se necessário."""
+    required_packages = {
+        "punkt": "tokenizers/punkt",
+        "punkt_tab": "tokenizers/punkt_tab",
+        "stopwords": "corpora/stopwords",
+        "averaged_perceptron_tagger": "taggers/averaged_perceptron_tagger",
+        "averaged_perceptron_tagger_eng": "taggers/averaged_perceptron_tagger_eng"
+    }
+
+    for package, path in required_packages.items():
+        try:
+            nltk.data.find(path)
+            # print(f"✔ {package} já está instalado.")
+        except LookupError:
+            # print(f"⬇ Baixando {package}...")
+            nltk.download(package)
+
 
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
@@ -1293,6 +1310,22 @@ def desprogramar_ferias():
 #* -------------------------
 #*         CHATBOT
 #* -------------------------
+def identificar_nomes(tokens):
+    """Verifica se uma palavra é um nome baseado nos nomes cadastrados no banco de dados."""
+    conn = get_db_connection()
+    if not conn:
+        return None
+    cursor = conn.cursor()
+    query = "SELECT Nome FROM Nome"
+    cursor.execute(query)
+    nomes_cadastrados = {row[0].lower() for row in cursor.fetchall()}
+    conn.close()
+
+    for token in tokens:
+        if token in nomes_cadastrados:
+            return token.capitalize()  # Retorna o nome encontrado
+    return None
+
 # Função para identificar a intenção e responder corretamente
 def identificar_pergunta(user_input):
     user_input = user_input.lower().strip()
@@ -1315,64 +1348,79 @@ def identificar_pergunta(user_input):
 
 def processar_mensagem(mensagem):
     """
-    Processa a mensagem do usuário utilizando SpaCy e extrai:
+    Processa a mensagem do usuário e extrai:
       - nome_input: nome da pessoa
-      - periodo: lista de meses/anos
+      - periodo: lista de meses/anos (máximo 2 elementos: mês e ano)
       - tipo_frequencia: tipo de presença (convertido para singular)
     """
-     # Primeiro, verifica se é uma pergunta de ajuda
     resultado_pergunta = identificar_pergunta(mensagem)
     if resultado_pergunta:
-        return {
-            "tipo": "ajuda",
-            "mensagem": resultado_pergunta["mensagem"]
-        }  # Retorna diretamente a resposta para o chat
+        return {"tipo": "ajuda", "mensagem": resultado_pergunta["mensagem"]}
 
-    
-    doc = nlp(mensagem)
-    nome_input = None
+    tokens = word_tokenize(mensagem.lower())  # Tokeniza a mensagem
+    tokens = [t for t in tokens if t.isalnum()]  # Remove pontuações desnecessárias
     periodo = []
+    nome_input = None
     tipo_frequencia = None
-    
-    padrao_data = re.compile(r"(\b\d{1,2})/(\d{4}\b)")
-    match_data = padrao_data.search(mensagem)
-    if match_data:
-        mes = match_data.group(1).zfill(2)  # Garante que o mês tenha dois dígitos
-        ano = match_data.group(2)
-        periodo.append(mes)
-        periodo.append(ano)
-        
-    for token in doc:
-        palavra = token.text.lower()
-        
-        # Ignora palavras que já foram processadas pela regex de data
-        if match_data and palavra in match_data.groups():
-            continue
 
-        # Verifica se a palavra representa um mês (abreviado ou completo) e converte para número
-        if palavra in meses_map:
+    # Padrões de períodos de data
+    padrao_ano = re.compile(r"\b\d{4}\b")  # Apenas ANO (ex.: "2024")
+    padrao_mes_ano_barra = re.compile(r"(\b\d{1,2})/(\d{4}\b)")  # "MM/YYYY"
+    padrao_mes_ano_de = re.compile(r"(\b[a-zA-Z]{3,9}|\b\d{1,2})\s+de\s+(\d{4}\b)")  # "setembro de 2024" ou "09 de 2024"
+
+    # ✅ Verifica "MM de YYYY" ou "Mês Abreviado de YYYY" (ex.: "set de 2024", "setembro de 2024", "09 de 2024")
+    match_mes_ano_de = padrao_mes_ano_de.search(mensagem)
+    if match_mes_ano_de:
+        mes_texto = match_mes_ano_de.group(1).lower()
+        ano = match_mes_ano_de.group(2)
+
+        mes_numerico = meses_map.get(mes_texto, mes_texto.zfill(2))  # Converte para número se for nome
+        if mes_numerico not in periodo:
+            periodo.append(mes_numerico)
+        if ano not in periodo:
+            periodo.append(ano)
+
+    # ✅ Verifica "MM/YYYY" (ex.: "09/2024")
+    match_mes_ano_barra = padrao_mes_ano_barra.search(mensagem)
+    if match_mes_ano_barra:
+        mes = match_mes_ano_barra.group(1).zfill(2)
+        ano = match_mes_ano_barra.group(2)
+        if mes not in periodo:
+            periodo.append(mes)
+        if ano not in periodo:
+            periodo.append(ano)
+
+    # ✅ Verifica apenas o ANO (ex.: "2024"), e só adiciona se não houver um ano na lista
+    match_ano = padrao_ano.search(mensagem)
+    if match_ano:
+        ano_encontrado = match_ano.group(0)
+        if len(periodo) == 0:  # Se não há mês, adiciona apenas o ano
+            periodo.append(ano_encontrado)
+        elif len(periodo) == 1 and periodo[0].isdigit() and len(periodo[0]) == 2:
+            periodo.append(ano_encontrado)  # Se já tem um mês, adiciona o ano
+
+    # ✅ Remove duplicatas e mantém no máximo 2 elementos (mês e ano)
+    periodo = list(dict.fromkeys(periodo))  # Remove duplicatas preservando a ordem correta
+    periodo = periodo[:2]  # Mantém apenas os dois primeiros valores (mês e ano)
+
+    for palavra in tokens:
+        if palavra in meses_map and meses_map[palavra] not in periodo:
             periodo.append(meses_map[palavra])
             continue
-
-        # Se for um número de 1 ou 2 dígitos entre 1 e 12, assume que é um mês
-        if palavra.isdigit() and 1 <= int(palavra) <= 12:
-            periodo.append(palavra.zfill(2))
-            continue
-
-        # Se for um número de 4 dígitos, assume que é um ano
-        if palavra.isdigit() and len(palavra) == 4:
+        if palavra.isdigit() and len(palavra) == 4 and palavra not in periodo:  # Evita duplicação de anos
             periodo.append(palavra)
             continue
 
-        # Identifica tipo de frequência (plural para singular)
+        # ✅ Identifica tipo de frequência (ex.: "faltas" → "falta")
         if palavra in frequencia_plural_para_singular:
             tipo_frequencia = frequencia_plural_para_singular[palavra]
         elif palavra in frequencia_plural_para_singular.values():
             tipo_frequencia = palavra
 
-        # Se for nome próprio (PROPN) e não representar um mês, considera como nome
-        if token.pos_ == "PROPN" and palavra not in meses_map.values():
-            nome_input = token.text
+    # 🔹 Busca o nome diretamente no banco de dados:
+    nome_input = identificar_nomes(tokens)
+
+    # print(f"🔍 Processamento: Nome={nome_input}, Periodo={periodo}, Tipo_Frequencia={tipo_frequencia}")
 
     return {
         "nome_input": nome_input,
@@ -1384,6 +1432,7 @@ def processar_mensagem(mensagem):
 
 # ******************
 #*  ROTAS DO CHATBOT
+#*  - QUERY DO BANCO
 # ******************
 def listar_nomes_disponiveis():
     try:
@@ -1454,24 +1503,23 @@ def consulta_nome_mais_presencas(tipo_frequencia, periodo=None):
     query = """
         SELECT Nome.Nome, Presenca.Presenca, FORMAT(Controle.Data, 'mm/yyyy') AS MesAno,
                COUNT(Controle.id_Controle) AS TotalPresencas
-        FROM (Controle
+        FROM ((Controle
         INNER JOIN Nome ON Controle.id_Nome = Nome.id_Nomes)
-        INNER JOIN Presenca ON Controle.id_Presenca = Presenca.id_Presenca
+        INNER JOIN Presenca ON Controle.id_Presenca = Presenca.id_Presenca)
         WHERE Presenca.Presenca = ?
     """
     params = [tipo_frequencia]
     
-    # Se houver um período especificado (mês e ano), adiciona o filtro de período
     if periodo:
-        if len(periodo) == 2:
-            mes = meses_map.get(periodo[0].lower(), periodo[0])  # Converte "agosto" -> "08"
-            mes = mes.zfill(2) if mes.isdigit() else mes  # Garante o formato "08"
+        if len(periodo) == 2:  # Caso seja MÊS e ANO
+            mes = meses_map.get(periodo[0].lower(), periodo[0])  # Converte "setembro" -> "09"
+            mes = mes.zfill(2) if mes.isdigit() else mes  # Garante formato "08"
             query += " AND FORMAT(Controle.Data, 'mm/yyyy') = ?"
             params.append(f"{mes}/{periodo[1]}")
-        else:
-            query += " AND FORMAT(Controle.Data, 'yyyy') = ?"
+        else:  # Caso seja apenas o ANO
+            query += " AND YEAR(Controle.Data) = ?"
             params.append(periodo[0])
-    
+
     # Finaliza a query
     query += """
         GROUP BY Nome.Nome, Presenca.Presenca, FORMAT(Controle.Data, 'mm/yyyy')
@@ -1695,6 +1743,7 @@ def chatbot():
 
 
 if __name__ == "__main__":
+    verificar_e_instalar_nltk()
     rprint('\n\t   :snake: [b]DASHBOARD - CONTROLE DE FREQUENCIA[/] :snake:')
     rprint('[d]_______________________________________________________________[/]\n')
     rprint('Voce consegue visualizar o seu Dashboard atraves da URL\n')
