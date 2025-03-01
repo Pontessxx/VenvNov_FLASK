@@ -1487,17 +1487,35 @@ def consulta_presencas(nome_input, periodo, tipo_frequencia):
     return executar_consulta(query, [tipo_frequencia, nome_input, periodo_formatado], "Quantidade de Presenças")
 
 def consulta_presenca_por_nome(nome_input, periodo):
+    """
+    Consulta as presenças de um nome específico dentro de um período de tempo.
+    """
     query = """
         SELECT Nome.Nome, Presenca.Presenca, FORMAT(Controle.Data, 'mm/yyyy') AS MesAno,
                COUNT(Controle.id_Controle) AS TotalPresencas
         FROM (Controle
         INNER JOIN Nome ON Controle.id_Nome = Nome.id_Nomes)
         INNER JOIN Presenca ON Controle.id_Presenca = Presenca.id_Presenca
-        WHERE Nome.Nome = ? AND FORMAT(Controle.Data, 'yyyy') = ?
+        WHERE Nome.Nome = ?
+    """
+    params = [nome_input]
+
+    # Se o usuário passou um mês e um ano (ex.: ["09", "2024"])
+    if len(periodo) == 2:
+        query += " AND FORMAT(Controle.Data, 'mm/yyyy') = ?"
+        params.append(f"{periodo[0]}/{periodo[1]}")
+
+    # Se o usuário passou apenas o ano (ex.: ["2024"])
+    elif len(periodo) == 1:
+        query += " AND YEAR(Controle.Data) = ?"
+        params.append(periodo[0])
+
+    query += """
         GROUP BY Nome.Nome, Presenca.Presenca, FORMAT(Controle.Data, 'mm/yyyy')
         ORDER BY FORMAT(Controle.Data, 'mm/yyyy') ASC;
     """
-    return executar_consulta(query, [nome_input, periodo[0]], "Contagem de Presenças por Nome")
+    
+    return executar_consulta(query, params, "Contagem de Presenças por Nome")
 
 def consulta_nome_mais_presencas(tipo_frequencia, periodo=None):
     query = """
